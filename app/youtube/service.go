@@ -20,6 +20,7 @@ import (
 
 	rssfeed "github.com/umputun/feed-master/app/feed"
 	ytfeed "github.com/umputun/feed-master/app/youtube/feed"
+	"github.com/umputun/feed-master/app/youtube/post_process"
 )
 
 //go:generate moq -out mocks/downloader.go -pkg mocks -skip-ensure -fmt goimports . DownloaderService
@@ -39,6 +40,8 @@ type Service struct {
 	KeepPerChannel  int
 	RootURL         string
 	SkipShorts      time.Duration
+	FfmpegFilters   []string
+	PostProcess     post_process.PostProcessService
 }
 
 // FeedInfo contains channel or feed ID, readable name and other per-feed info
@@ -288,6 +291,19 @@ func (s *Service) procChannels(ctx context.Context) error {
 				log.Printf("[WARN] failed to update metadata for %s: %s", entry.VideoID, tagsErr)
 			}
 
+			if s.isFfmpegPostProcess() {
+				postProcessedFile, ppErr := s.PostProcess.Apply(ctx, file, s.FfmpegFilters...)
+				if ppErr != nil {
+					log.Printf("[WARN] failed to post process file %s file %s: %v", entry.VideoID, file, ppErr)
+					continue
+				}
+
+				if errMv := os.Rename(postProcessedFile, file); errMv != nil {
+					log.Printf("[WARN] failed to replace post processed file %s: %v", entry.VideoID, file, errMv)
+				}
+				continue
+			}
+
 			processed++
 
 			fsize := 0
@@ -417,6 +433,10 @@ func (s *Service) isShort(file string) (bool, time.Duration) {
 		}
 	}
 	return false, 0
+}
+
+func (s *Service) isFfmpegPostProcess() bool {
+	return len(s.FfmpegFilters) > 0
 }
 
 // update sets entry file name and reset published ts

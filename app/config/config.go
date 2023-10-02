@@ -36,6 +36,7 @@ type Conf struct {
 		RSSLocation     string             `yaml:"rss_location"`
 		SkipShorts      time.Duration      `yaml:"skip_shorts"`
 		DisableUpdates  bool               `yaml:"disable_updates"`
+		FfmpegFilters   []string           `yaml:"ffmpeg_filters"`
 	} `yaml:"youtube"`
 }
 

@@ -25,6 +25,7 @@ import (
 	"github.com/umputun/feed-master/app/proc"
 	"github.com/umputun/feed-master/app/youtube"
 	ytfeed "github.com/umputun/feed-master/app/youtube/feed"
+	"github.com/umputun/feed-master/app/youtube/post_process"
 	"github.com/umputun/feed-master/app/youtube/store"
 )
 
@@ -103,6 +104,7 @@ func main() {
 		dwnl := ytfeed.NewDownloader(conf.YouTube.DlTemplate, outWr, errWr, conf.YouTube.FilesLocation)
 		fd := ytfeed.Feed{Client: &http.Client{Timeout: 10 * time.Second},
 			ChannelBaseURL: conf.YouTube.BaseChanURL, PlaylistBaseURL: conf.YouTube.BasePlaylistURL}
+		ffmpegPostProcess := post_process.NewFfmpegPostProcess(outWr, errWr)
 
 		channels := []string{}
 		for _, c := range conf.YouTube.Channels {
@@ -125,6 +127,8 @@ func main() {
 			},
 			DurationService: &duration.Service{},
 			SkipShorts:      conf.YouTube.SkipShorts,
+			PostProcess:     ffmpegPostProcess,
+			FfmpegFilters:   conf.YouTube.FfmpegFilters,
 		}
 		go func() {
 			if conf.YouTube.DisableUpdates {
